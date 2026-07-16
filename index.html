@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob:; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+  <title>STL Compare — ローカル一括比較ビューアー</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f6f8fb;
+      --muted: #9aa7b8;
+      --muted-strong: #c0cad7;
+      --panel: #121a26;
+      --panel-2: #192332;
+      --line: #2a3748;
+      --accent: #56e0bd;
+      --accent-strong: #7ff0d4;
+      --accent-ink: #06251e;
+      --warning: #ffcd70;
+      --danger: #ff7b8a;
+      --tile-height: 228px;
+      --tile-min-width: 208px;
+      font-family: Inter, "Segoe UI", "Yu Gothic UI", "Hiragino Kaku Gothic ProN", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      min-width: 320px;
+      min-height: 100%;
+      margin: 0;
+      background: #080d14;
+      color: var(--ink);
+    }
+
+    body {
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    button, input, select { font: inherit; }
+
+    button, select, input[type="range"] { accent-color: var(--accent); }
+
+    button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--accent-strong);
+      outline-offset: 2px;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      height: 100vh;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(230px, auto) minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 22px;
+      min-height: 76px;
+      padding: 12px 20px;
+      background: rgba(18, 26, 38, 0.98);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand { min-width: 0; }
+
+    .brand-kicker {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 21px;
+      line-height: 1.05;
+      letter-spacing: -.025em;
+    }
+
+    .folder-form {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .primary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s ease, transform .15s ease;
+    }
+
+    .primary-button:hover { background: var(--accent-strong); }
+    .primary-button:active { transform: translateY(1px); }
+
+    .folder-summary {
+      min-width: 0;
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .quantity-control {
+      display: grid;
+      grid-template-columns: auto minmax(120px, 180px) 54px;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .control-label {
+      color: var(--muted-strong);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .quantity-value {
+      display: inline-flex;
+      align-items: baseline;
+      justify-content: center;
+      min-width: 54px;
+      color: var(--ink);
+      font-size: 22px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+
+    .quantity-value small {
+      margin-left: 3px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 50px;
+      padding: 7px 20px;
+      overflow-x: auto;
+      background: #0d141e;
+      border-bottom: 1px solid var(--line);
+      scrollbar-width: thin;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .toolbar-separator {
+      width: 1px;
+      height: 24px;
+      margin: 0 4px;
+      background: var(--line);
+      flex: 0 0 auto;
+    }
+
+    .tool-button, .tool-select {
+      min-height: 34px;
+      padding: 0 11px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel);
+      color: var(--muted-strong);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .tool-button:hover, .tool-select:hover {
+      border-color: #40526a;
+      color: var(--ink);
+    }
+
+    .tool-button[aria-pressed="true"] {
+      border-color: rgba(86, 224, 189, .65);
+      background: rgba(86, 224, 189, .13);
+      color: var(--accent-strong);
+    }
+
+    .viewer-shell {
+      position: relative;
+      min-height: 0;
+      overflow: auto;
+      overscroll-behavior: contain;
+      background-color: #080d14;
+      background-image: radial-gradient(circle at 50% 0%, rgba(60, 86, 112, .13), transparent 42%);
+    }
+
+    .viewer-stage {
+      position: relative;
+      width: 100%;
+      min-height: 100%;
+      user-select: none;
+      touch-action: none;
+    }
+
+    #glCanvas {
+      position: sticky;
+      top: 0;
+      display: block;
+      width: 100%;
+      cursor: grab;
+      outline: none;
+      z-index: 0;
+    }
+
+    #glCanvas.dragging { cursor: grabbing; }
+
+    .tile-overlay {
+      position: absolute;
+      inset: 0 auto auto 0;
+      display: grid;
+      width: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .tile-card {
+      position: relative;
+      min-width: 0;
+      height: var(--tile-height);
+      border-right: 1px solid rgba(92, 111, 134, .36);
+      border-bottom: 1px solid rgba(92, 111, 134, .36);
+      box-shadow: inset 0 0 0 1px transparent;
+    }
+
+    .tile-card.selected {
+      box-shadow: inset 0 0 0 2px var(--accent);
+      z-index: 1;
+    }
+
+    .tile-head {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 34px;
+      padding: 0 10px;
+      background: linear-gradient(180deg, rgba(7, 12, 19, .9), rgba(7, 12, 19, .2));
+    }
+
+    .tile-index {
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .08em;
+    }
+
+    .tile-name {
+      min-width: 0;
+      overflow: hidden;
+      color: #e7edf5;
+      font-size: 11px;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tile-meta {
+      position: absolute;
+      right: 9px;
+      bottom: 7px;
+      padding: 3px 6px;
+      border: 1px solid rgba(130, 148, 171, .22);
+      border-radius: 4px;
+      background: rgba(8, 13, 20, .72);
+      color: #8593a5;
+      font-size: 9px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tile-state {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 70%;
+      transform: translate(-50%, -50%);
+      color: #7f8da0;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .tile-state.error { color: var(--danger); }
+
+    .empty-state {
+      position: sticky;
+      top: 0;
+      left: 0;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      min-height: 100%;
+      padding: 36px;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .empty-state[hidden] { display: none; }
+
+    .empty-card {
+      width: min(560px, 100%);
+      padding: 34px;
+      border: 1px solid #2b394b;
+      border-radius: 15px;
+      background: rgba(15, 22, 33, .94);
+      box-shadow: 0 22px 70px rgba(0, 0, 0, .3);
+      text-align: center;
+    }
+
+    .empty-mark {
+      display: grid;
+      place-items: center;
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 18px;
+      border: 1px solid rgba(86, 224, 189, .45);
+      border-radius: 14px;
+      background: rgba(86, 224, 189, .09);
+      color: var(--accent);
+      font-family: ui-monospace, "Cascadia Mono", monospace;
+      font-size: 17px;
+      font-weight: 900;
+    }
+
+    .empty-card h2 {
+      margin: 0 0 10px;
+      font-size: clamp(20px, 3vw, 28px);
+      letter-spacing: -.03em;
+    }
+
+    .empty-card p {
+      max-width: 440px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.75;
+    }
+
+    .empty-card strong { color: var(--muted-strong); }
+
+    .drop-active::after {
+      content: "このフォルダーを読み込む";
+      position: absolute;
+      inset: 14px;
+      display: grid;
+      place-items: center;
+      border: 2px dashed var(--accent);
+      border-radius: 14px;
+      background: rgba(9, 20, 24, .9);
+      color: var(--accent-strong);
+      font-size: 18px;
+      font-weight: 800;
+      z-index: 20;
+    }
+
+    .statusbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 18px;
+      min-height: 32px;
+      padding: 5px 20px;
+      border-top: 1px solid var(--line);
+      background: #0d141e;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    .status-message {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .privacy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #91a0b3;
+      white-space: nowrap;
+    }
+
+    .privacy-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(86, 224, 189, .11);
+    }
+
+    @media (max-width: 880px) {
+      .topbar {
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+      }
+
+      .folder-form { grid-column: 1 / -1; grid-row: 2; }
+      .quantity-control { grid-column: 2; grid-row: 1; }
+      .folder-summary { flex: 1; }
+      :root { --tile-min-width: 180px; --tile-height: 205px; }
+    }
+
+    @media (max-width: 560px) {
+      .topbar { padding: 10px 12px; }
+      .brand-title { font-size: 18px; }
+      .quantity-control { grid-template-columns: auto 74px 46px; }
+      .quantity-control input { width: 74px; }
+      .folder-summary { display: none; }
+      .primary-button { flex: 1; }
+      .toolbar { padding-inline: 12px; }
+      .statusbar { padding-inline: 12px; }
+      .statusbar { grid-template-columns: 1fr; }
+      .privacy-badge { display: none; }
+      :root { --tile-min-width: 160px; --tile-height: 190px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-kicker">Local WebGL workspace</span>
+        <h1 class="brand-title">STL Compare</h1>
+      </div>
+
+      <form class="folder-form" id="folderForm">
+        <input class="file-input" id="folderInput" type="file" accept=".stl" webkitdirectory directory multiple>
+        <label class="primary-button" for="folderInput"><span aria-hidden="true">＋</span> フォルダーを選択</label>
+        <span class="folder-summary" id="folderSummary">STLを含むローカルフォルダーを指定してください</span>
+      </form>
+
+      <div class="quantity-control">
+        <label class="control-label" for="quantity">同時表示</label>
+        <input id="quantity" type="range" min="1" max="200" value="50" step="1">
+        <output class="quantity-value" id="quantityValue" for="quantity">50<small>件</small></output>
+      </div>
+    </header>
+
+    <nav class="toolbar" aria-label="3D表示操作">
+      <div class="toolbar-group" aria-label="標準ビュー">
+        <button class="tool-button" type="button" data-view="iso">等角</button>
+        <button class="tool-button" type="button" data-view="front">正面</button>
+        <button class="tool-button" type="button" data-view="right">右</button>
+        <button class="tool-button" type="button" data-view="top">上</button>
+        <button class="tool-button" type="button" data-view="back">背面</button>
+      </div>
+      <span class="toolbar-separator" aria-hidden="true"></span>
+      <button class="tool-button" id="resetView" type="button">表示をリセット</button>
+      <button class="tool-button" id="wireToggle" type="button" aria-pressed="false">エッジ</button>
+      <label class="control-label" for="fitMode">スケール</label>
+      <select class="tool-select" id="fitMode">
+        <option value="individual">個別フィット</option>
+        <option value="common">共通スケール</option>
+      </select>
+      <span class="toolbar-separator" aria-hidden="true"></span>
+      <span class="control-label">ドラッグ: 回転 ／ Shift＋ドラッグ: 移動 ／ ホイール: 拡大</span>
+    </nav>
+
+    <section class="viewer-shell" id="viewerShell" aria-label="STL比較ビュー">
+      <div class="viewer-stage" id="viewerStage">
+        <canvas id="glCanvas" tabindex="0" aria-label="同期操作対応3D STLビューアー"></canvas>
+        <div class="tile-overlay" id="tileOverlay" aria-hidden="true"></div>
+        <div class="empty-state" id="emptyState">
+          <div class="empty-card">
+            <div class="empty-mark">STL</div>
+            <h2>形状の差を、一度に見渡す。</h2>
+            <p>上の<strong>「フォルダーを選択」</strong>からSTLファイルを読み込みます。ファイルはこのPC内だけで処理され、ネットワークへ送信されません。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="statusbar">
+      <span class="status-message" id="statusMessage" role="status" aria-live="polite">待機中 — Binary / ASCII STLに対応</span>
+      <span class="privacy-badge"><span class="privacy-dot" aria-hidden="true"></span>通信なし・ローカル処理</span>
+    </footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
