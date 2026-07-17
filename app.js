@@ -722,7 +722,7 @@
     const lineFragmentSource = `#version 300 es
       precision highp float;
       out vec4 outColor;
-      void main() { outColor = vec4(0.035, 0.065, 0.085, 0.74); }
+      void main() { outColor = vec4(0.0, 0.243, 0.569, 1.0); }
     `;
 
     const solidProgram = linkProgram(context, vertexSource, fragmentSource);
@@ -760,7 +760,7 @@
     function beginFrame(width, height) {
       context.disable(context.SCISSOR_TEST);
       context.viewport(0, 0, width, height);
-      context.clearColor(0.035, 0.055, 0.082, 1);
+      context.clearColor(0.914, 0.937, 0.973, 1);
       context.clear(context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
       context.enable(context.SCISSOR_TEST);
     }
@@ -775,7 +775,7 @@
 
       context.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
       context.scissor(clipX, clipY, clipRight - clipX, clipTop - clipY);
-      context.clearColor(0.052, 0.078, 0.11, 1);
+      context.clearColor(0.894, 0.918, 0.973, 1);
       context.clear(context.COLOR_BUFFER_BIT | context.DEPTH_BUFFER_BIT);
 
       const aspect = viewport.width / Math.max(1, viewport.height);
@@ -785,7 +785,7 @@
       context.useProgram(solidProgram);
       context.uniformMatrix4fv(solidUniforms.uModelView, false, modelView);
       context.uniformMatrix4fv(solidUniforms.uProjection, false, projection);
-      context.uniform3f(solidUniforms.uBaseColor, 0.36, 0.78, 0.72);
+      context.uniform3f(solidUniforms.uBaseColor, 0.0, 0.333, 0.604);
       context.bindVertexArray(model.gpu.vao);
       context.enable(context.POLYGON_OFFSET_FILL);
       context.polygonOffset(1, 1);
